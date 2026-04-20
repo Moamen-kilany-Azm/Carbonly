@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── MULTI-TENANCY ───────────────────────────────────────────────────────────
+
+model Entity {
+  id                   String             @id @default(cuid())
+  name                 String
+  slug                 String             @unique
+  industry             String?
+  country              String?
+  logoUrl              String?
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  subscriptionStatus   SubscriptionStatus @default(TRIALING)
+  trialEndsAt          DateTime?
+  users                UserEntity[]
+  emissionRecords      EmissionRecord[]
+  reports              Report[]
+  yearlyConfigs        YearlyConfig[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
+// ─── AUTH & USERS ─────────────────────────────────────────────────────────────
+
+model User {
+  id              String           @id @default(cuid())
+  name            String?
+  email           String           @unique
+  emailVerified   DateTime?
+  image           String?
+  passwordHash    String?
+  globalRole      GlobalRole       @default(EXPERT)
+  accounts        Account[]
+  sessions        Session[]
+  entities        UserEntity[]
+  emissionRecords EmissionRecord[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+enum GlobalRole {
+  SUPER_ADMIN
+  ADMIN
+  EXPERT
+}
+
+model UserEntity {
+  id        String     @id @default(cuid())
+  userId    String
+  entityId  String
+  role      EntityRole @default(EXPERT)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entity    Entity     @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@unique([userId, entityId])
+}
+
+enum EntityRole {
+  ADMIN
+  EXPERT
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── YEARLY CONFIG ────────────────────────────────────────────────────────────
+
+model YearlyConfig {
+  id              String           @id @default(cuid())
+  entityId        String
+  year            Int
+  baselineYear    Boolean          @default(false)
+  notes           String?
+  entity          Entity           @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  emissionFactors EmissionFactor[]
+
+  @@unique([entityId, year])
+}
+
+// ─── EMISSIONS TAXONOMY ───────────────────────────────────────────────────────
+
+model Scope {
+  id          String     @id @default(cuid())
+  number      Int        @unique
+  name        String
+  description String?
+  color       String?
+  activities  Activity[]
+}
+
+model Activity {
+  id              String           @id @default(cuid())
+  scopeId         String
+  name            String
+  description     String?
+  unit            String
+  equation        String
+  isActive        Boolean          @default(true)
+  sortOrder       Int              @default(0)
+  scope           Scope            @relation(fields: [scopeId], references: [id])
+  emissionFactors EmissionFactor[]
+  emissionRecords EmissionRecord[]
+
+  @@index([scopeId])
+}
+
+model EmissionFactor {
+  id              String         @id @default(cuid())
+  activityId      String
+  yearlyConfigId  String?
+  name            String
+  value           Float
+  unit            String
+  source          String?
+  region          String?
+  gwp             String?
+  isDefault       Boolean        @default(false)
+  activity        Activity       @relation(fields: [activityId], references: [id])
+  yearlyConfig    YearlyConfig?  @relation(fields: [yearlyConfigId], references: [id])
+  emissionRecords EmissionRecord[]
+
+  @@index([activityId])
+}
+
+// ─── EMISSION RECORDS ─────────────────────────────────────────────────────────
+
+model EmissionRecord {
+  id               String         @id @default(cuid())
+  entityId         String
+  userId           String
+  activityId       String
+  emissionFactorId String
+  quantity         Float
+  unit             String
+  period           DateTime
+  year             Int
+  month            Int
+  notes            String?
+  co2eKg           Float
+  co2eT            Float
+  dataSource       DataSource     @default(MANUAL)
+  entity           Entity         @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [userId], references: [id])
+  activity         Activity       @relation(fields: [activityId], references: [id])
+  emissionFactor   EmissionFactor @relation(fields: [emissionFactorId], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([entityId, year])
+  @@index([entityId, activityId])
+}
+
+enum DataSource {
+  MANUAL
+  CSV_IMPORT
+  API
+}
+
+// ─── REPORTS ─────────────────────────────────────────────────────────────────
+
+model Report {
+  id        String       @id @default(cuid())
+  entityId  String
+  year      Int
+  title     String
+  status    ReportStatus @default(DRAFT)
+  fileUrl   String?
+  summary   Json?
+  entity    Entity       @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+enum ReportStatus {
+  DRAFT
+  GENERATED
+  PUBLISHED
+}

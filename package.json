@@ -1,26 +1,61 @@
 {
-  "name": "carbonly-tmp",
+  "name": "carbonly",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed-records": "tsx prisma/seed-records.ts",
+    "db:studio": "prisma studio",
+    "docs:pdf": "node scripts/generate-architecture-pdf.mjs",
+    "docs:brd": "node scripts/generate-docs-pdf.mjs brd",
+    "docs:stories": "node scripts/generate-docs-pdf.mjs stories",
+    "docs:all": "node scripts/generate-docs-pdf.mjs"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@hookform/resolvers": "^5.2.2",
+    "@mui/icons-material": "^9.0.0",
+    "@mui/material": "^9.0.0",
+    "@mui/material-nextjs": "^9.0.0",
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.7.0",
+    "@stripe/stripe-js": "^9.1.0",
+    "@types/pg": "^8.20.0",
+    "bcryptjs": "^3.0.3",
+    "bootstrap": "^5.3.8",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^1.8.0",
     "next": "16.2.3",
+    "next-auth": "^5.0.0-beta.30",
+    "pg": "^8.20.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-hook-form": "^7.72.1",
+    "recharts": "^3.8.1",
+    "stripe": "^22.0.1",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "marked": "^18.0.0",
+    "prisma": "^7.7.0",
+    "puppeteer": "^24.41.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }
